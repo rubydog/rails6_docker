@@ -1,0 +1,39 @@
+/log/*
+/tmp/*
+/public/packs/*
+!/log/.keep
+!/tmp/.keep
+.DS_Store
+
+# Ignore node_modules
+/node_modules/*
+
+# Ignore bundler config.
+/.bundle
+
+# Ignore Byebug command history file.
+.byebug_history
+
+# Ignore .git as it's not needed with the docker built.
+.git
+.cache
+
+*.md
+
+.DS_Store
+.bin
+.git
+.gitignore
+.bundleignore
+.bundle
+.byebug_history
+.rspec
+tmp
+log
+test
+config/deploy
+public/packs
+public/packs-test
+node_modules
+yarn-error.log
+coverage/

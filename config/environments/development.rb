@@ -66,4 +66,6 @@ Rails.application.configure do
 
   # Allow connections to local server.
   config.hosts.clear
+
+  config.webpacker.check_yarn_integrity = false
 end
