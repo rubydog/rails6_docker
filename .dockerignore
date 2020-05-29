@@ -4,36 +4,44 @@
 !/log/.keep
 !/tmp/.keep
 .DS_Store
-
+/public/packs-test/
+/public/assets
 # Ignore node_modules
 /node_modules/*
 
 # Ignore bundler config.
 /.bundle
+.bundleignore
 
 # Ignore Byebug command history file.
-.byebug_history
+/.byebug_history
 
 # Ignore .git as it's not needed with the docker built.
-.git
-.cache
+/.git
+/.gitignore
+/.cache
 
-*.md
-
-.DS_Store
-.bin
-.git
-.gitignore
-.bundleignore
-.bundle
-.byebug_history
-.rspec
-tmp
-log
-test
-config/deploy
-public/packs
-public/packs-test
-node_modules
 yarn-error.log
-coverage/
+/coverage/
+
+config/master.key
+yarn-debug.log
+.yarn-integrity
+.DS_Store
+
+# Ignore the default SQLite database.
+/db/*.sqlite3
+/db/*.sqlite3-journal
+
+# Ignore all logfiles and tempfiles.
+/log/*
+/tmp/*
+!/log/.keep
+!/tmp/.keep
+
+# Ignore uploaded files in development.
+/storage/*
+!/storage/.keep
+
+/public/assets
+.byebug_history

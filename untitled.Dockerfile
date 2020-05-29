@@ -30,7 +30,7 @@ FROM ruby:2.7.1-slim as Builder
 ARG FOLDERS_TO_REMOVE
 ARG BUNDLE_WITHOUT
 
-RUN apt-get update && apt-get install -y gnupg2
+RUN apt-get update && apt-get install -y gnupg2 curl
 
 ADD https://dl.yarnpkg.com/debian/pubkey.gpg /tmp/yarn-pubkey.gpg
 RUN apt-key add /tmp/yarn-pubkey.gpg && rm /tmp/yarn-pubkey.gpg
@@ -57,21 +57,24 @@ RUN echo 'deb http://dl.yarnpkg.com/debian/ stable main' > /etc/apt/sources.list
     tzdata \
     libgeos-dev \
     nodejs \
-    yarn
+    yarn && \
+    apt-get clean && \
+  	rm -rf /var/lib/apt/lists/* /var/lib/dpkg /var/lib/cache /var/lib/log
 
- # Make 'app' directory and cd into it
+ # Make 'code' directory and cd into it
 WORKDIR /code
 
 ## TALK: Order of yarn install and bundle install is important, if in your project node packages will change more often that gems than you should do yarn install after bundle install because docker will invalidate subsequent cahces
 
 ## Do not copy whole app yet because it will unneccesarrily increase size of layer
 COPY Gemfile* package.json yarn.lock ./
-RUN yarn install --check-files
+RUN yarn install --check-files && rm -rf /tmp/*
 
 ## Check bundle version on your local machine and install the same version to avoid incompatibilty, it is usually at the bottom of Gemfile - `BUNDLED WITH`
 RUN gem install bundler:2.1.4 -N && \
 	bundle config set without $BUNDLE_WITHOUT && \
 	bundle config set no-cache 'true' && \
+	# bundle config set clean 'true' && \
 	bundle install -j4 --retry 3 && \
 	rm -rf /usr/local/bundle/cache/*.gem && \
 	rm -rf /usr/local/bundle/gems/*/test && \
@@ -84,22 +87,28 @@ RUN gem install bundler:2.1.4 -N && \
 	find /usr/local/bundle/gems/ -name "*.rdoc" -delete && \
 	find /usr/local/bundle/gems/ -name "*.o" -delete
 
-COPY . .
-COPY --from=Builder /usr/local/bundle/ /vendor/bundle/
+COPY . /code
 
 ## Highlight Folders to Remove
 RUN gem install activerecord-nulldb-adapter -N && \
-bundle exec rake assets:precompile RAILS_ENV=$RAILS_ENV DB_ADAPTER=nulldb && \
-gem uninstall activerecord-nulldb-adapter
+	bundle exec rake assets:precompile RAILS_ENV=$RAILS_ENV DB_ADAPTER=nulldb && \
+	gem uninstall activerecord-nulldb-adapter -a  && \
+	yarn cache clean
 
-RUN yarn cache clean && rm -rf $FOLDERS_TO_REMOVE
+# RUN rm -rf \
+#         /tmp/* \
+#         app/assets \
+#         lib/assets \
+#         test \
+#         tmp/cache \
+#         vendor/assets \
+#         /log/*
 
 ###############################
 # Stage Final
 FROM ruby:2.7.1-slim as Final
 
 ARG ADDITIONAL_PACKAGES
-ENV BUNDLE_PATH="/vendor/bundle"
 
 RUN apt-get update && apt-get install -qq -y --fix-missing --no-install-recommends --auto-remove \
     postgresql-client \
@@ -111,7 +120,12 @@ RUN apt-get update && apt-get install -qq -y --fix-missing --no-install-recommen
   	rm -rf /var/lib/apt/lists/* /var/lib/dpkg /var/lib/cache /var/lib/log
 
 # Copy app with gems from former build stage
+COPY --from=Builder /usr/local/bundle/ /usr/local/bundle/
 COPY --from=Builder /code /code
+
+# RUN rm -rf /gems/ruby/2.7.1/cache/*.gem \
+#   && find /gems/ruby/2.7.1/gems/ -name "*.c" -delete \
+#   && find /gems/ruby/2.7.1/gems/ -name "*.o" -delete
 
 WORKDIR /code
 
@@ -130,8 +144,7 @@ CMD ["bundle", "exec", "rails", "server"]
 ## 	without FOLDERS_TO_REMOVE: 518mb
 ##  with FOLDERS_TO_REMOVE: 392mb 
 ## 	Removing apt cache: 374mb
-##  Remove gems cache file, markdown files, etc: 288
-##  Remove gems spec test: 285
+##  Remove gems cache file, markdown files, etc
 ## 
 
 # Should I remove storage folder?
